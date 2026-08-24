@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Payment Collector</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    background: #11161a;
+    font-family: Arial, sans-serif;
+}
+
+.receipt {
+    width: 100%;
+    max-width: 390px;
+    background: #f7f3e9;
+    padding: 35px 28px;
+    color: #1c1b1a;
+    box-shadow: 0 25px 60px rgba(0,0,0,.5);
+    position: relative;
+}
+
+.eyebrow {
+    text-align: center;
+    font-family: monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: #57534a;
+    text-transform: uppercase;
+}
+
+h1 {
+    text-align: center;
+    font-family: monospace;
+    font-size: 21px;
+    margin: 8px 0 25px;
+}
+
+.field {
+    margin-bottom: 16px;
+}
+
+label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+    color: #57534a;
+    margin-bottom: 7px;
+}
+
+input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #d8d0bc;
+    border-radius: 5px;
+    background: #fffdf8;
+    outline: none;
+    font-size: 14px;
+}
+
+input:focus {
+    border-color: #0b6e6e;
+}
+
+.amount-box {
+    position: relative;
+}
+
+.amount-box span {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: monospace;
+}
+
+.amount-box input {
+    padding-left: 28px;
+    font-family: monospace;
+}
+
+.error {
+    display: none;
+    color: #e8604c;
+    font-size: 11px;
+    margin-top: -9px;
+    margin-bottom: 14px;
+}
+
+.divider {
+    border: none;
+    border-top: 1px dashed #c9c1ae;
+    margin: 22px 0;
+}
+
+button {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 5px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.primary {
+    background: #0b6e6e;
+    color: white;
+}
+
+.primary:hover {
+    background: #075b5b;
+}
+
+.secondary {
+    margin-top: 10px;
+    background: transparent;
+    border: 1px solid #d8d0bc;
+    color: #57534a;
+}
+
+.secondary:hover {
+    border-color: #57534a;
+}
+
+/* QR */
+
+#qr-view,
+#success-view {
+    display: none;
+}
+
+.amount-display {
+    text-align: center;
+    font-family: monospace;
+    font-size: 40px;
+    font-weight: bold;
+    margin: 12px 0;
+}
+
+.payee {
+    text-align: center;
+    font-size: 12px;
+    color: #57534a;
+    margin-bottom: 20px;
+}
+
+.payee strong {
+    color: #1c1b1a;
+}
+
+.qr-wrapper {
+    display: flex;
+    justify-content: center;
+}
+
+#qr {
+    padding: 14px;
+    background: white;
+    border: 1px solid #ddd4c1;
+}
+
+.status {
+    text-align: center;
+    margin: 18px 0;
+    color: #57534a;
+    font-family: monospace;
+    font-size: 11px;
+}
+
+.dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    background: #e8604c;
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+    50% {
+        opacity: .3;
+    }
+}
+
+.link-row {
+    display: flex;
+    gap: 7px;
+}
+
+.link-row input {
+    font-family: monospace;
+    font-size: 10px;
+    background: #eee7d7;
+}
+
+.copy {
+    width: 75px;
+    padding: 0;
+    background: #e4dcc9;
+    color: #1c1b1a;
+}
+
+.actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 9px;
+}
+
+.small {
+    padding: 10px 5px;
+    background: #e9e2ce;
+    color: #1c1b1a;
+    font-size: 11px;
+}
+
+/* SUCCESS */
+
+.success-icon {
+    width: 60px;
+    height: 60px;
+    background: #1f7a4d;
+    border-radius: 50%;
+    margin: 0 auto 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 30px;
+}
+
+.success-title {
+    text-align: center;
+    color: #1f7a4d;
+    font-family: monospace;
+    font-weight: bold;
+}
+
+.success-amount {
+    text-align: center;
+    font-family: monospace;
+    font-weight: bold;
+    font-size: 32px;
+    margin: 8px 0 20px;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    padding: 7px 0;
+    font-size: 12px;
+}
+
+.row .key {
+    color: #57534a;
+}
+
+.row .value {
+    font-family: monospace;
+    text-align: right;
+    word-break: break-word;
+}
+
+.barcode {
+    height: 35px;
+    margin: 20px 0 6px;
+    background: repeating-linear-gradient(
+        90deg,
+        #1c1b1a 0px,
+        #1c1b1a 2px,
+        transparent 2px,
+        transparent 5px
+    );
+}
+
+.ref {
+    text-align: center;
+    font-family: monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #57534a;
+}
+
+.note {
+    text-align: center;
+    color: #57534a;
+    font-size: 10px;
+    line-height: 1.5;
+    margin-top: 18px;
+}
+
+.toast {
+    position: fixed;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 30px;
+    font-size: 12px;
+    display: none;
+}
+
+@media (max-width: 430px) {
+    body {
+        padding: 10px;
+    }
+
+    .receipt {
+        padding: 32px 22px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="receipt">
+
+    <!-- FORM VIEW -->
+    <div id="form-view">
+
+        <div class="eyebrow">Payment Collector</div>
+
+        <h1>Create a QR request</h1>
+
+        <div class="field">
+            <label>UPI ID</label>
+            <input
+                id="upi"
+                type="text"
+                placeholder="yourname@upi"
+            >
+        </div>
+
+        <div class="error" id="upi-error">
+            Enter a valid UPI ID
+        </div>
+
+        <div class="field">
+            <label>Payee Name</label>
+            <input
+                id="payee"
+                type="text"
+                placeholder="Your name"
+            >
+        </div>
+
+        <div class="field">
+            <label>Amount</label>
+
+            <div class="amount-box">
+                <span>₹</span>
+
+                <input
+                    id="amount"
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    placeholder="0.00"
+                >
+            </div>
+        </div>
+
+        <div class="error" id="amount-error">
+            Enter an amount greater than 0
+        </div>
+
+        <div class="field">
+            <label>Note</label>
+
+            <input
+                id="note"
+                type="text"
+                maxlength="40"
+                placeholder="What's this for?"
+            >
+        </div>
+
+        <hr class="divider">
+
+        <button class="primary" id="generate">
+            Generate QR
+        </button>
+
+    </div>
+
+
+    <!-- QR VIEW -->
+    <div id="qr-view">
+
+        <div class="eyebrow">
+            Scan to pay
+        </div>
+
+        <div class="amount-display">
+            ₹<span id="display-amount">0.00</span>
+        </div>
+
+        <div class="payee">
+            to
+            <strong id="display-payee">Merchant</strong>
+            <br>
+            <span id="display-upi">—</span>
+        </div>
+
+        <div class="qr-wrapper">
+            <div id="qr"></div>
+        </div>
+
+        <div class="status">
+            <span class="dot"></span>
+            Waiting for payment...
+        </div>
+
+        <div class="link-row">
+
+            <input
+                id="upi-link"
+                readonly
+            >
+
+            <button
+                class="copy"
+                id="copy"
+            >
+                Copy
+            </button>
+
+        </div>
+
+        <div class="actions">
+
+            <button
+                class="small"
+                id="open-upi"
+            >
+                Open UPI
+            </button>
+
+            <button
+                class="small"
+                id="download"
+            >
+                Download QR
+            </button>
+
+        </div>
+
+        <hr class="divider">
+
+        <button
+            class="primary"
+            id="paid"
+        >
+            ✓ I've received the payment
+        </button>
+
+        <button
+            class="secondary"
+            id="new-from-qr"
+        >
+            Start a new request
+        </button>
+
+    </div>
+
+
+    <!-- SUCCESS VIEW -->
+    <div id="success-view">
+
+        <div class="success-icon">
+            ✓
+        </div>
+
+        <div class="success-title">
+            Payment received
+        </div>
+
+        <div
+            class="success-amount"
+            id="success-amount"
+        >
+            ₹0.00
+        </div>
+
+        <hr class="divider">
+
+        <div class="row">
+            <span class="key">Paid to</span>
+            <span class="value" id="success-payee">—</span>
+        </div>
+
+        <div class="row">
+            <span class="key">UPI ID</span>
+            <span class="value" id="success-upi">—</span>
+        </div>
+
+        <div class="row">
+            <span class="key">Note</span>
+            <span class="value" id="success-note">—</span>
+        </div>
+
+        <div class="row">
+            <span class="key">Reference</span>
+            <span class="value" id="success-ref">—</span>
+        </div>
+
+        <div class="row">
+            <span class="key">Time</span>
+            <span class="value" id="success-time">—</span>
+        </div>
+
+        <div class="barcode"></div>
+
+        <div class="ref" id="barcode-ref">
+            —
+        </div>
+
+        <hr class="divider">
+
+        <button
+            class="secondary"
+            onclick="window.print()"
+        >
+            Print Receipt
+        </button>
+
+        <button
+            class="secondary"
+            id="new-request"
+        >
+            Create another request
+        </button>
+
+        <div class="note">
+            Payment confirmation is manual.
+            Automatic verification requires a payment
+            gateway and server-side webhook.
+        </div>
+
+    </div>
+
+</div>
+
+<div class="toast" id="toast">
+    Copied
+</div>
+
+
+<script>
+
+let paymentData = {};
+
+
+/* GET ELEMENTS */
+
+const formView = document.getElementById("form-view");
+const qrView = document.getElementById("qr-view");
+const successView = document.getElementById("success-view");
+
+const upiInput = document.getElementById("upi");
+const payeeInput = document.getElementById("payee");
+const amountInput = document.getElementById("amount");
+const noteInput = document.getElementById("note");
+
+
+/* SHOW VIEW */
+
+function show(view) {
+
+    formView.style.display = "none";
+    qrView.style.display = "none";
+    successView.style.display = "none";
+
+    view.style.display = "block";
+}
+
+
+/* GENERATE QR */
+
+document.getElementById("generate").addEventListener("click", function() {
+
+    const upi = upiInput.value.trim();
+    const payee = payeeInput.value.trim() || "Merchant";
+    const amount = Number(amountInput.value);
+    const note = noteInput.value.trim();
+
+
+    /* VALIDATE UPI */
+
+    const upiValid =
+        /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+$/.test(upi);
+
+    if (!upiValid) {
+
+        document.getElementById("upi-error").style.display = "block";
+
+        return;
+
+    } else {
+
+        document.getElementById("upi-error").style.display = "none";
+
+    }
+
+
+    /* VALIDATE AMOUNT */
+
+    if (!amount || amount <= 0) {
+
+        document.getElementById("amount-error").style.display = "block";
+
+        return;
+
+    } else {
+
+        document.getElementById("amount-error").style.display = "none";
+
+    }
+
+
+    const amountFixed = amount.toFixed(2);
+
+
+    /* CREATE UPI LINK */
+
+    const params = new URLSearchParams();
+
+    params.append("pa", upi);
+    params.append("pn", payee);
+    params.append("am", amountFixed);
+    params.append("cu", "INR");
+
+    if (note) {
+        params.append("tn", note);
+    }
+
+
+    const upiLink =
+        "upi://pay?" + params.toString();
+
+
+    paymentData = {
+        upi: upi,
+        payee: payee,
+        amount: amountFixed,
+        note: note,
+        link: upiLink
+    };
+
+
+    /* UPDATE SCREEN */
+
+    document.getElementById("display-amount")
+        .textContent = amountFixed;
+
+    document.getElementById("display-payee")
+        .textContent = payee;
+
+    document.getElementById("display-upi")
+        .textContent = upi;
+
+    document.getElementById("upi-link")
+        .value = upiLink;
+
+
+    /* CLEAR OLD QR */
+
+    const qrBox = document.getElementById("qr");
+
+    qrBox.innerHTML = "";
+
+
+    /* CHECK QR LIBRARY */
+
+    if (typeof QRCode === "undefined") {
+
+        alert(
+            "QR library could not load. Please check your internet connection."
+        );
+
+        return;
+    }
+
+
+    /* CREATE QR */
+
+    new QRCode(qrBox, {
+
+        text: upiLink,
+
+        width: 190,
+
+        height: 190,
+
+        colorDark: "#000000",
+
+        colorLight: "#ffffff",
+
+        correctLevel: QRCode.CorrectLevel.M
+
+    });
+
+
+    show(qrView);
+
+});
+
+
+/* COPY */
+
+document.getElementById("copy").addEventListener("click", async function() {
+
+    const link =
+        document.getElementById("upi-link").value;
+
+
+    try {
+
+        await navigator.clipboard.writeText(link);
+
+        showToast("UPI link copied");
+
+    } catch (error) {
+
+        const input =
+            document.getElementById("upi-link");
+
+        input.select();
+
+        document.execCommand("copy");
+
+        showToast("UPI link copied");
+
+    }
+
+});
+
+
+/* OPEN UPI */
+
+document.getElementById("open-upi").addEventListener("click", function() {
+
+    if (paymentData.link) {
+
+        window.location.href =
+            paymentData.link;
+
+    }
+
+});
+
+
+/* DOWNLOAD QR */
+
+document.getElementById("download").addEventListener("click", function() {
+
+    const qrBox =
+        document.getElementById("qr");
+
+    const canvas =
+        qrBox.querySelector("canvas");
+
+    if (!canvas) {
+
+        alert("QR code is not ready.");
+
+        return;
+
+    }
+
+
+    const link =
+        document.createElement("a");
+
+    link.download =
+        "payment-qr.png";
+
+    link.href =
+        canvas.toDataURL("image/png");
+
+    link.click();
+
+});
+
+
+/* MARK PAID */
+
+document.getElementById("paid").addEventListener("click", function() {
+
+    const reference =
+        "UPI" +
+        Math.floor(
+            100000000000 +
+            Math.random() * 899999999999
+        );
+
+
+    const now =
+        new Date();
+
+
+    const time =
+        now.toLocaleString(
+            "en-IN",
+            {
+                dateStyle: "medium",
+                timeStyle: "short"
+            }
+        );
+
+
+    document.getElementById("success-amount")
+        .textContent =
+        "₹" + paymentData.amount;
+
+    document.getElementById("success-payee")
+        .textContent =
+        paymentData.payee;
+
+    document.getElementById("success-upi")
+        .textContent =
+        paymentData.upi;
+
+    document.getElementById("success-note")
+        .textContent =
+        paymentData.note || "—";
+
+    document.getElementById("success-ref")
+        .textContent =
+        reference;
+
+    document.getElementById("barcode-ref")
+        .textContent =
+        reference;
+
+    document.getElementById("success-time")
+        .textContent =
+        time;
+
+
+    show(successView);
+
+});
+
+
+/* BACK */
+
+function reset() {
+
+    upiInput.value = "";
+    payeeInput.value = "";
+    amountInput.value = "";
+    noteInput.value = "";
+
+    document.getElementById("upi-error")
+        .style.display = "none";
+
+    document.getElementById("amount-error")
+        .style.display = "none";
+
+    document.getElementById("qr")
+        .innerHTML = "";
+
+    paymentData = {};
+
+    show(formView);
+
+}
+
+
+document.getElementById("new-from-qr")
+    .addEventListener("click", reset);
+
+document.getElementById("new-request")
+    .addEventListener("click", reset);
+
+
+/* TOAST */
+
+function showToast(message) {
+
+    const toast =
+        document.getElementById("toast");
+
+    toast.textContent = message;
+
+    toast.style.display = "block";
+
+    setTimeout(function() {
+
+        toast.style.display = "none";
+
+    }, 1500);
+
+}
+
+</script>
+
+</body>
+</html>
